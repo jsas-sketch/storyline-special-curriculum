@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Storyline Kids Special Series Formatter</title>
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #f5f5f5; font-family: Arial, sans-serif; }
+  #root { min-height: 100vh; }
+  .logo-container svg { height: 100%; width: auto; display: block; }
+  @media print {
+    .no-print { display: none !important; }
+    body { background: white !important; margin: 0; padding: 0; }
+    #root { min-height: auto; }
+    #root > div { max-width: 100% !important; }
+    #root > div > div { border: none !important; padding: 0 !important; box-shadow: none !important; }
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
+    @page { size: letter; margin: 0.6in 0.75in; }
+    table { break-inside: avoid; }
+    .print-section, .print-sectionLabel, .print-subsection, .print-bold-label { break-after: avoid; page-break-after: avoid; }
+    .print-banner, .print-field { break-inside: avoid; }
+    .print-section + div, .print-sectionLabel + div, .print-subsection + div, .print-bold-label + div { break-before: avoid; page-break-before: avoid; }
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useCallback } = React;
+
+/* ==========================================================================
+   SERIES CONFIG — EDIT THESE FOUR LINES AND NOTHING ELSE.
+   Everything series-specific in this app reads from here.
+   ========================================================================== */
+const SERIES = {
+  title:       "Special Series",              // Shown in the app header, next to the logo
+  headerLabel: "WHERE WE ARE IN THIS SERIES", // Replaces "WHERE WE ARE IN THE 40 KEY EVENTS"
+  fieldLabel:  "Where We Are (Series)",       // Same label on the Shared Fields tab
+  storageKey:  "sks",                         // MUST stay different from the main app's "skc"
+};
+/* ========================================================================== */
+
+const C = { deep: "#1B3A4B", sky: "#6BA3BE", sage: "#7A9E7E", coral: "#E8845C", foam: "#A8D5D0", sun: "#F2C75C", light: "#F0F5F7" };
+
+// Storage helpers using localStorage. Keys are namespaced by SERIES.storageKey so
+// this app cannot collide with the main 40 Key Events formatter on the same origin.
+const K_SHARED = `${SERIES.storageKey}-shared`;
+const K_CONTENT = `${SERIES.storageKey}-content`;
+const storage = {
+  get(key) { try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : null; } catch(e) { return null; } },
+  set(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch(e) {} },
+  del(key) { try { localStorage.removeItem(key); } catch(e) {} }
+};
+
+const LOGO_SVG = `<svg id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 236.7882 105.4539">
+  <g>
+    <path id="fullLogo" d="M216.3846,40.5338c.231.6344,0,1.0379-.8082,1.3272L209.9807,43.88a1.0249,1.0249,0,0,1-1.4427-.6345c-1.1534-2.7115-3.1151-3.9233-6.3468-3.9233-3.4031,0-5.654,1.6153-5.654,4.0959,0,2.4235,1.7319,3.52,9.4619,6.2314,7.5585,2.6544,10.7891,6.3468,10.7891,12.4615,0,7.2693-6.2314,12.8662-15.2886,12.8662-8.193,0-13.328-3.5769-15.1742-10.27a.9482.9482,0,0,1,.6356-1.2689l5.9992-1.9617c.8083-.288,1.2118-.0571,1.3856.75.75,3.2318,3.0567,4.7887,7.0955,4.7887,3.7507,0,6.2313-1.7307,6.2313-4.3268,0-2.4235-1.5581-3.4615-7.7882-5.6541-9-3.23-12.4044-6.8074-12.4044-13.4423s5.8849-12.2306,14.5386-12.2306C209.2879,31.3611,214.3647,34.5917,216.3846,40.5338Z" style="fill: #fff"/>
+    <path id="fullLogo-2" data-name="fullLogo" d="M140.2986,26.6078v6.1228a1.266,1.266,0,0,1-1.3681,1.3681h-7.1644a1.2666,1.2666,0,0,1-1.3681-1.3681V26.6078a1.2666,1.2666,0,0,1,1.3681-1.3681h7.1644A1.266,1.266,0,0,1,140.2986,26.6078Zm0,13.2885V74.0274a.9227.9227,0,0,1-.977.9771h-7.8807a.9425.9425,0,0,1-1.0429-.9771V39.8963a.9418.9418,0,0,1,1.0429-.977h7.8807A.9219.9219,0,0,1,140.2986,39.8963Z" style="fill: #fff"/>
+    <path id="fullLogo-3" data-name="fullLogo" d="M126.2765,72.8663,106.24,49.55l14.9283-17.1122a.9221.9221,0,0,0-.1048-1.3778l-5.9789-5.1341a.9417.9417,0,0,0-1.4276.0619L97.4413,44.5755V30.185a.88.88,0,0,0-.9641-.964h-8.035a.9289.9289,0,0,0-1.0278.964V75.3064a.929.929,0,0,0,1.0278.9641h8.035a.88.88,0,0,0,.9641-.9641V54.5022l21.324,24.8141a.9418.9418,0,0,0,1.4276.0618l5.9789-5.134A.9221.9221,0,0,0,126.2765,72.8663Z" style="fill: #fff"/>
+    <path id="fullLogo-4" data-name="fullLogo" d="M174.6569,35.177c-3.1357-2.8109-7.6859-4.5254-13.8021-4.5254H147.5785a.9289.9289,0,0,0-1.0277.9641V76.737a.91.91,0,0,0,.9641.9641h13.2222c.0177,0,.0351.0013.0528.0013s.035-.0013.0527-.0013h.0122c6.04,0,10.552-1.673,13.6837-4.44a23.5161,23.5161,0,0,0,.1184-38.0843Zm-9.1,32.45a14.2411,14.2411,0,0,1-4.7667.8186h-3.449a.7634.7634,0,0,1-.7633-.7634V40.6713a.7634.7634,0,0,1,.7633-.7634h3.449a14.27,14.27,0,0,1,4.7667,27.72Z" style="fill: #fff"/>
+    <path id="fullLogo-5" data-name="fullLogo" d="M46.3339,63.2968a1.9642,1.9642,0,0,1-.5091-1.3193V46.2347a.4276.4276,0,0,1,.75-.28L55.17,55.85a.6354.6354,0,0,0,.48.2188h2.8776a1.7754,1.7754,0,0,1,1.316.5837L69.7055,67.543a.3885.3885,0,0,0,.674-.215c1.5689-13.53,1.9848-32.6945-.5036-40.4951l-.027-.0846a2.0445,2.0445,0,0,0-.5013-.8238l-.0628-.0629C68.7319,25.3079,63.3755,20,45.8122,20c-17.5669,0-22.9014,5.312-23.4517,5.8661l-.0625.0629a2.0441,2.0441,0,0,0-.4973.8194l-.0269.0845c-3.5692,11.1881-1.1645,45.7594,2.0485,53.5437l.0549.1328A2.0445,2.0445,0,0,0,24.903,81.582l.13.0606c.3339.1556,8.3219,3.8113,20.7916,3.8113a58.5014,58.5014,0,0,0,17.027-2.4358.7071.7071,0,0,0,.3179-1.1512ZM44.4106,38.9431,25.8866,57.82a.3634.3634,0,0,1-.6225-.2292q-.0924-1.4116-.167-2.848c-.5555-10.7373-.2433-19.7318.8288-24.7375A2.313,2.313,0,0,1,27.14,28.4277c2.2915-1.17,7.783-3.6034,18.6725-3.6034,10.876,0,16.3761,2.43,18.6973,3.6164a2.319,2.319,0,0,1,1.2179,1.5811c1.0691,5.0091,1.38,13.9958.8249,24.7209q-.0137.2628-.028.525a.3563.3563,0,0,1-.6178.2209c-1.6425-1.7808-3.5368-3.8326-3.8656-4.181a2.2656,2.2656,0,0,0-1.7583-.9311h-2.484a.6293.6293,0,0,1-.4662-.2067L47.2117,38.9937A1.9166,1.9166,0,0,0,44.4106,38.9431Z" style="fill: #fff"/>
+  </g>
+</svg>`;
+
+function parseScript(script) {
+  if (!script) return [];
+  return script.split("\n").filter(l => l.trim()).map(line => {
+    const t = line.trim();
+    if (t.startsWith("SAY:")) return { type: "say", text: t.slice(4).trim() };
+    if (t.startsWith("ASK:")) return { type: "ask", text: t.slice(4).trim() };
+    if (t.startsWith("ENGAGE:")) return { type: "engage", text: t.slice(7).trim() };
+    if (t.startsWith("READ:") || t.startsWith("Read ")) return { type: "read", text: t };
+    if (t.startsWith("[") && t.endsWith("]")) return { type: "dir", text: t };
+    return { type: "p", text: t };
+  });
+}
+
+const PH = (text) => ({ type: "placeholder", text });
+
+// SERIES FORK: the four K-3 / 4th-5th WINs said "the event," which is 40 Key Events
+// language. Reworded to be series-neutral. The five younger-room WINs are unchanged.
+const WINS = {
+  nursery_prayer: "Kids feel safe and loved in a calm, nurturing environment.",
+  "12_24_months": "Kids hear the key phrase and feel safe and loved.",
+  toddlers: "Kids participate in the story and repeat the foundational truth.",
+  preschool_lg: "Kids retell the story and connect it to the foundational truth.",
+  preschool_sg: "Kids retell the story and connect it to the foundational truth.",
+  k3_sg: "Kids explain the passage and its connection to the gospel in their own words.",
+  k3_lg: "Kids explain the passage and its connection to the gospel in their own words.",
+  "4th5th_leader": "Students own the truth and articulate what it means for their lives.",
+  "4th5th_learner": "Students own the truth and articulate what it means for their lives.",
+};
+
+const sharedHeader = (s, tmplName, tmplId) => [
+  { type: "banner", text: tmplName, scripture: s.scripture_ref },
+  { type: "field", label: "THE BIG IDEA TODAY", value: s.big_idea },
+  { type: "field", label: SERIES.headerLabel, value: s.event_name },
+  { type: "field", label: "FOUNDATIONAL TRUTH", value: s.foundational_truth },
+  { type: "field", label: "MEMORY VERSE", value: s.memory_verse_ref },
+  { type: "field", label: "WIN", value: WINS[tmplId] || "" },
+];
+const preparing = () => [
+  { type: "section", text: "PREPARING" },
+  { type: "bold", text: "3 - Pray for 3 individual kids by name." },
+  { type: "bold", text: "2 - Read the passage for the week. Ask: (1) What does this say about God? (2) What does this say about us?" },
+  { type: "bold", text: "1 - Familiarize yourself with the curriculum by reading over it once." },
+];
+const devotional = (s) => [
+  { type: "section", text: "LEADER DEVOTIONAL" },
+  s.leader_devotional ? { type: "devotional", text: s.leader_devotional } : PH("Devotional content"),
+];
+const memoryVerse = (s) => [
+  { type: "bold", text: "MEMORY VERSE" },
+  s.memory_verse ? { type: "verse", text: `"${s.memory_verse}" — ${s.memory_verse_ref}` } : PH("Memory verse"),
+];
+const ftBlock = (s) => [
+  { type: "bold", text: `FOUNDATIONAL TRUTH: ${s.foundational_truth || "___"}` },
+  { type: "p", text: `Let's say this together on the count of 3. 1-2-3… "${s.foundational_truth || "___"}!"` },
+  { type: "bold", text: `Q: ${s.catechism_q || "___"}` },
+  { type: "bold", text: `A: ${s.catechism_a || "___"}` },
+];
+const rules_k3 = [
+  { type: "p", text: "Before we start, let's go over our rules:" },
+  { type: "p", text: "1. If a leader is talking…I AM QUIET." },
+  { type: "p", text: "2. If a leader asks me to do something…DO IT WITH A GOOD ATTITUDE." },
+  { type: "p", text: "3. Keep your hands to yourself…AND NOT ON YOUR NEIGHBOR." },
+  { type: "p", text: "4. KEEP YOUR NAMETAG ON." },
+];
+const rules_pre = [
+  { type: "say", text: "Hi, friends! I am so happy you are here. My name is ______. Before we begin our time learning together, I have a few important rules to remind you of. Do you think you can help me remember them all?" },
+  { type: "p", text: "1. If the teacher is talking…I am quiet." },
+  { type: "p", text: "2. Keep a happy heart." },
+  { type: "p", text: "3. Hands to yourself." },
+  { type: "p", text: "4. Keep your nametag on." },
+];
+const gospelK3 = [
+  { type: "bold", text: "GOSPEL" },
+  { type: "say", text: "All of God's promises lead to Jesus. Let's remember what Jesus did:" },
+  { type: "p", text: "G – God created us to be with Him" },
+  { type: "p", text: "O – Our sins separate us from God." },
+  { type: "p", text: "S – Sins cannot be removed by good deeds." },
+  { type: "p", text: "P – Paying the price for sin, Jesus died and rose again!" },
+  { type: "p", text: "E – Everyone who trusts in Jesus alone has eternal life." },
+  { type: "p", text: "L – Life with Jesus starts now and lasts forever! One day, He will make all things new." },
+];
+const gospelPre = [
+  { type: "bold", text: "GOSPEL PRESENTATION" },
+  { type: "say", text: "Now let's practice the gospel!" },
+  { type: "p", text: "• Jesus came down to be born as a baby." },
+  { type: "p", text: "• He lived a perfect life." },
+  { type: "p", text: "• He died on the cross for our sins, was buried in a tomb, and on the third day He rose again, ascending to heaven." },
+  { type: "p", text: "• One day, He's coming back to be our King forever." },
+  { type: "p", text: "• AND THAT'S THE GOSPEL TRUTH!" },
+];
+// One source of truth for the Kingdom paragraph. The original app had this text
+// pasted twice, so editing one copy silently disagreed with the other.
+const KINGDOM_TEXT = "The story of scripture is all about the King and His Kingdom. It is a story of a Kingdom established through creation, lost through sin, and re-established through our rescuer, Jesus Christ, who defeated sin and death on the cross. Jesus offers life with Him forever to all who trust and follow Him, and one day, King Jesus will return to make all things new.";
+const kingdom = { type: "p", text: KINGDOM_TEXT };
+const kingdomSay = { type: "say", text: KINGDOM_TEXT };
+
+function render_nursery(s, d) { return [...sharedHeader(s,"Nursery Prayer Guide","nursery_prayer"),...devotional(s),{type:"section",text:"PRAYER PROMPTS"},...(d.prayer_prompts?d.prayer_prompts.split("\n").filter(l=>l.trim()).map(l=>({type:"p",text:"• "+l.trim()})):[PH("Prayer prompts")]),...memoryVerse(s)]; }
+
+function render_1224(s, d) { return [...sharedHeader(s,"12-24 Months","12_24_months"),...preparing(),...devotional(s),{type:"section",text:"OUTLINE"},{type:"table",rows:[["Segment","Time"],["1. Check In / Greet Families","ongoing"],["2. Sensory Story Time","3-5 min"],["3. Prayer","1 min"],["4. Song","2-3 min"],["5. Diaper Check","ongoing"],["6. Pickup / Parent Handoff","ongoing"]]},{type:"section",text:"RETELL THE STORY"},{type:"bold",text:`1. ${d.retell_1||"___"}`},{type:"bold",text:`2. ${d.retell_2||"___"}`},{type:"bold",text:`3. ${d.retell_3||"___"}`},...memoryVerse(s),{type:"section",text:"SENSORY STORY TIME  (3-5 min)"},{type:"bold",text:`Supplies: ${d.sensory_supplies||"___"}`},...parseScript(d.sensory_script),...(d.sensory_script?[]:[PH("Sensory script")]),{type:"section",text:"PRAYER  (1 min)"},d.prayer?{type:"p",text:d.prayer}:PH("Prayer"),{type:"section",text:"SONG  (2-3 min)"},d.song_tune?{type:"p",text:`Sing to the tune of "${d.song_tune}". Sing 2-3 times. Clap along.`}:PH("Song tune"),d.song_lyrics?{type:"verse",text:d.song_lyrics}:PH("Song lyrics"),{type:"section",text:"PARENT PICKUP HANDOFF"},d.parent_handoff?{type:"p",text:d.parent_handoff}:PH("Parent handoff script")]; }
+
+function render_toddlers(s, d) { return [...sharedHeader(s,"Toddlers & 2s","toddlers"),...preparing(),...devotional(s),{type:"section",text:"OUTLINE"},{type:"table",rows:[["Segment","Time"],["1. Check In / Greet Families","ongoing"],["2. Build & Story Activity","5-8 min"],["3. Prayer","1 min"],["4. Song","2-3 min"],["5. Diaper Check","ongoing"],["6. Optional Activity","5 min"],["7. Pickup / Parent Handoff","ongoing"]]},{type:"section",text:"STORY SUMMARY"},{type:"bold",text:`1. Setup: ${d.story_setup||"___"}`},{type:"bold",text:`2. Conflict: ${d.story_conflict||"___"}`},{type:"bold",text:`3. Resolution: ${d.story_resolution||"___"}`},...memoryVerse(s),{type:"section",text:"BUILD & STORY ACTIVITY  (5-8 min)"},d.activity_name?{type:"bold",text:`"${d.activity_name}"`}:PH("Activity name"),{type:"bold",text:`Supplies: ${d.activity_supplies||"___"}`},...parseScript(d.activity_script),...(d.activity_script?[]:[PH("Activity script")]),{type:"section",text:"PRAYER  (1 min)"},d.prayer?{type:"p",text:d.prayer}:PH("Prayer"),{type:"section",text:"SONG  (2-3 min)"},d.song_tune?{type:"p",text:`Sing to the tune of "${d.song_tune}". Sing 2-3 times. Clap along.`}:PH("Song tune"),d.song_lyrics?{type:"verse",text:d.song_lyrics}:PH("Song lyrics"),{type:"section",text:"OPTIONAL REINFORCEMENT ACTIVITY  (5 min)"},d.optional_activity_name?{type:"bold",text:d.optional_activity_name}:PH("Activity name"),d.optional_activity_supplies?{type:"p",text:`Supplies: ${d.optional_activity_supplies}`}:null,...parseScript(d.optional_activity_script),{type:"section",text:"PARENT PICKUP HANDOFF"},d.parent_handoff?{type:"p",text:d.parent_handoff}:PH("Parent handoff script")].filter(Boolean); }
+
+function render_preschool_lg(s, d) { return [...sharedHeader(s,"Preschool Large Group","preschool_lg"),d.mailbox_prop?{type:"p",text:`Total time: ~25 min | Mailbox prop: ${d.mailbox_prop}`}:null,...preparing(),...devotional(s),{type:"section",text:"OUTLINE"},{type:"table",rows:[["Segment","Time"],["1. Classroom Rules","3 min"],["2. Song","3 min"],["3. Anchor: Kingdom Framework","2 min"],["4. Encounter: Mailbox + Story","8 min"],["5. Connect: Why This Matters","1 min"],["6. Respond: Truth & Memory Verse","3 min"],["7. Prayer","2 min"],["8. Closing Worship","3 min"]]},{type:"sectionLabel",text:"SECTION 1 — SETUP"},{type:"subsection",text:"A. CLASSROOM RULES  (3 min)"},...rules_pre,{type:"dir",text:"[Transition: That was so great — thanks for your help! Now let's stand up and continue to worship God together.]"},{type:"subsection",text:"B. WORSHIP  (3 min)"},{type:"dir",text:"[Transition after song: I love hearing all of you sing so beautifully. Can everyone find a seat on your bottom and make sure your ears are on so that we can listen and learn together from God's Word?]"},{type:"sectionLabel",text:"SECTION 2 — LESSON"},{type:"subsection",text:"A. ANCHOR: THE BIG STORY  (2 min)"},{type:"say",text:"Hi, Storyline kids! I am so glad you are here! We are going to keep learning about the story of Scripture."},kingdom,{type:"engage",text:'Call and response: "Who is our King?" … "JESUS!" (repeat 2x)'},...parseScript(d.anchor_say),...(d.anchor_say?[]:[PH("Anchor connection to this week")]),{type:"subsection",text:"B. ENCOUNTER: MAILBOX + STORY  (8 min)"},{type:"bold",text:"MAILBOX"},{type:"dir",text:"[Walk to the mailbox with visible excitement.]"},{type:"say",text:"Wait! We have to check our mailbox today! What do you think is in our mailbox today?"},...parseScript(d.mailbox_script),...(d.mailbox_script?[]:[PH("Mailbox reveal script")]),{type:"bold",text:"STORY"},...parseScript(d.story_script),...(d.story_script?[]:[PH("Story script with ENGAGE cues every 90-120 sec")]),{type:"subsection",text:"C. CONNECT + GOSPEL  (4 min)"},...parseScript(d.connect_script),...(d.connect_script?[]:[PH("Connect script")]),...gospelPre,{type:"sectionLabel",text:"SECTION 3 — CLOSING"},{type:"subsection",text:"FOUNDATIONAL TRUTH & MEMORY VERSE  (3 min)"},...ftBlock(s),...memoryVerse(s),{type:"subsection",text:"PRAYER  (2 min)"},d.prayer?{type:"p",text:d.prayer}:PH("Prayer"),{type:"subsection",text:"GIVE  (1 min)"},{type:"say",text:"At Storyline, we believe the church is a family, and we love one another by using our gifts as we gather, give, and serve. You will have a chance each week to give to your church family on your way out the door by dropping your money in the giving box."},{type:"bold",text:"CLOSING WORSHIP  (3 min)"},{type:"dir",text:"[Dismiss kids back to their classrooms.]"}].filter(Boolean); }
+
+function render_preschool_sg(s, d) { return [...sharedHeader(s,"Preschool Small Group","preschool_sg"),...preparing(),...devotional(s),{type:"section",text:"OUTLINE"},{type:"table",rows:[["Segment","Time"],["1. Welcome Activity","10 min"],["2. Rules & Transition to LG","3 min"],["3. Large Group Time","~25 min"],["4. Snack & Review","10 min"],["5. Activity / Craft","10 min"],["6. Free Play & Pickup","10 min"]]},{type:"section",text:"1. WELCOME ACTIVITY  (10 min)"},d.welcome_activity_name?{type:"bold",text:d.welcome_activity_name}:PH("Welcome activity name"),d.welcome_activity_supplies?{type:"p",text:`Supplies: ${d.welcome_activity_supplies}`}:null,...parseScript(d.welcome_activity_script),...(d.welcome_activity_script?[]:[PH("Welcome activity script")]),{type:"dir",text:'[Transition: "Who is ready to go to story time? Let\'s line up!"]'},{type:"section",text:"2. SNACK & REVIEW  (10 min)"},{type:"dir",text:"[Hand out Cheerios in coffee filters with a small cup of water. Ask these questions:]"},{type:"ask",text:d.snack_q1||"___"},{type:"ask",text:d.snack_q2||"___"},{type:"ask",text:d.snack_q3||"___"},{type:"ask",text:d.snack_q4||"___"},{type:"bold",text:"FOUNDATIONAL TRUTH & MEMORY VERSE"},...ftBlock(s),...memoryVerse(s),{type:"section",text:"3. ACTIVITY / CRAFT  (10 min)"},d.craft_name?{type:"bold",text:d.craft_name}:PH("Craft name"),d.craft_supplies?{type:"p",text:`Supplies: ${d.craft_supplies}`}:null,...parseScript(d.craft_script),...(d.craft_script?[]:[PH("Craft script")]),{type:"section",text:"4. PICKUP"},{type:"p",text:"Greet parents. Speak an encouraging word about their child. Use the handoff script:"},d.parent_handoff?{type:"p",text:d.parent_handoff}:PH("Parent handoff script")].filter(Boolean); }
+
+function render_k3_sg(s, d) { const passages=[1,2,3,4,5].map(n=>({ref:d[`passage_${n}_ref`],script:d[`passage_${n}_script`]})).filter(p=>p.ref); return [...sharedHeader(s,"K-3rd Small Group","k3_sg"),...preparing(),...devotional(s),{type:"section",text:"OUTLINE"},{type:"table",rows:[["Segment","Time"],["1. Welcome & Verse Activity","10 min"],["2. Rules","2 min"],["3. Bible Lesson","20 min"],["4. Truth & Prayer","5 min"],["5. Transition to LG","~30 min"],["6. Wrap Up","5-10 min"]]},{type:"section",text:"1. WELCOME & VERSE ACTIVITY  (10 min)"},d.verse_activity_name?{type:"bold",text:d.verse_activity_name}:PH("Activity name"),d.verse_activity_supplies?{type:"p",text:`Supplies: ${d.verse_activity_supplies}`}:null,d.verse_activity_instructions?{type:"p",text:d.verse_activity_instructions}:PH("Instructions"),...(d.verse_activity_say?parseScript(d.verse_activity_say):[]),{type:"dir",text:"[Leader Tip: If your kids played with toys during welcome, clean them up before Small Group Time.]"},{type:"dir",text:"[Transition: Everyone, find a seat — it's time to jump into our Bible story today!]"},...rules_k3,{type:"section",text:"2. BIBLE LESSON  (20 min)"},{type:"subsection",text:"A. ANCHOR"},{type:"say",text:"Alright, friends! Our adventure through the story of scripture continues. The story of scripture is all about the King and His Kingdom!"},...parseScript(d.anchor_say),...(d.anchor_say?[]:[PH("Anchor — position today's story")]),d.vocabulary?{type:"bold",text:"Characters/Vocabulary to know:"}:null,...(d.vocabulary?parseScript(d.vocabulary):[]),{type:"subsection",text:"B. ENCOUNTER"},{type:"dir",text:"[Distribute Bibles. Guide kids to each passage.]"},...passages.flatMap((p,i)=>[{type:"bold",text:`Passage ${i+1}: ${p.ref}`},{type:"dir",text:`[Read ${p.ref} together.]`},...parseScript(p.script),...(p.script?[]:[PH(`Passage ${i+1} teaching`)])]),...(passages.length===0?[PH("Passages with SAY/ASK/ENGAGE")]:[]),{type:"subsection",text:"C. DISCUSSION"},...[["discussion_q1","Q1 (Recall)"],["discussion_q2","Q2 (Interpretation)"],["discussion_q3","Q3 (Christ Connection)"],["discussion_q4","Q4 (Application)"],["discussion_q5","Q5 (Bridge)"]].map(([k,label])=>({type:"bold",text:`${label}: ${d[k]||"___"}`})),{type:"section",text:"3. TRUTH & PRAYER  (5 min)"},...ftBlock(s),...memoryVerse(s),{type:"say",text:"Let's pray. Does anyone have a prayer request?"},{type:"dir",text:"[Take requests. Invite a kid to pray if willing.]"},d.prayer?{type:"p",text:d.prayer}:PH("Prayer"),{type:"section",text:"4. TRANSITION TO LARGE GROUP"},...parseScript(d.bridge_question),...(d.bridge_question?[]:[PH("Transition bridge question")]),{type:"dir",text:"[Leader Tip: Take a bathroom break before heading into Large Group time!]"},{type:"section",text:"5. WRAP UP  (5-10 min)"},...parseScript(d.wrapup_debrief),...(d.wrapup_debrief?[]:[PH("Wrap up debrief")]),{type:"dir",text:"[Hang out until pickup. If time allows, have kids practice saying the memory verse to each other.]"}].filter(Boolean); }
+
+function render_k3_lg(s, d) { return [...sharedHeader(s,"K-3rd Large Group","k3_lg"),d.mailbox_prop?{type:"p",text:`Total time: ~25 min | Mailbox prop: ${d.mailbox_prop}`}:null,...preparing(),...devotional(s),{type:"section",text:"OUTLINE"},{type:"table",rows:[["Segment","Time"],["1. Welcome & Game Time","5 min"],["2. Worship","3 min"],["3. Bible Lesson (Capstone)","10 min"],["4. Foundational Truth & Memory Verse","3 min"],["5. Prayer","2 min"],["6. Give","1 min"],["7. Closing Worship","3 min"]]},{type:"sectionLabel",text:"SECTION 1 — SETUP (Host & Worship Leader)"},{type:"subsection",text:"A. WELCOME & GAME TIME  (5 min)"},{type:"say",text:"Welcome to church — I am so excited that you are all here!"},d.game_name?{type:"bold",text:d.game_name}:PH("Game name"),d.game_supplies?{type:"p",text:`Supplies: ${d.game_supplies}`}:null,...parseScript(d.game_script),...(d.game_script?[]:[PH("Game script")]),{type:"subsection",text:"B. WORSHIP  (3 min)"},{type:"say",text:"Let's stand up and worship together!"},{type:"dir",text:'[Transition after worship: Great job. Find a seat and look up at the screen. To prepare our hearts to listen and learn from God\'s Word, let\'s read Isaiah 40:8: "The grass withers, the flowers fade, but the word of our God remains forever."]'},{type:"sectionLabel",text:"SECTION 2 — LESSON (Large Group Teacher)"},{type:"subsection",text:"A. ANCHOR  (1 min)"},kingdom,...parseScript(d.anchor_say),...(d.anchor_say?[]:[PH("Anchor — reference what SG covered")]),{type:"subsection",text:"B. MAILBOX  (1 min)"},{type:"dir",text:"[Walk to the mailbox with visible excitement.]"},{type:"say",text:"Wait — we have to check our mailbox! What do you think is in here today?"},...parseScript(d.mailbox_script),...(d.mailbox_script?[]:[PH("Mailbox reveal script")]),{type:"subsection",text:"C. ENCOUNTER: CAPSTONE TEACHING  (3 min)"},...parseScript(d.capstone_script),...(d.capstone_script?[]:[PH("Capstone teaching — escalates from SG, doesn't repeat")]),{type:"subsection",text:"D. CONNECT + GOSPEL  (3 min)"},...parseScript(d.connect_gospel_script),...(d.connect_gospel_script?[]:[PH("Connect script")]),...gospelK3,{type:"sectionLabel",text:"SECTION 3 — CLOSING (Host & Worship Leader)"},{type:"subsection",text:"FOUNDATIONAL TRUTH & MEMORY VERSE  (3 min)"},...ftBlock(s),...memoryVerse(s),{type:"subsection",text:"PRAYER  (2 min)"},d.prayer?{type:"p",text:d.prayer}:PH("Prayer"),{type:"subsection",text:"GIVE  (1 min)"},{type:"say",text:"At Storyline, we believe the church is a family, and we love one another by using our gifts as we gather, give, and serve. You will have a chance each week to give to your church family on your way out the door by dropping your money in the giving box."},{type:"bold",text:"CLOSING WORSHIP  (3 min)"},{type:"dir",text:"[Dismiss kids back to classrooms.]"}].filter(Boolean); }
+
+function render_45_leader(s, d) { return [...sharedHeader(s,"4th-5th Leader Guide","4th5th_leader"),...preparing(),...devotional(s),{type:"section",text:"OUTLINE"},{type:"table",rows:[["Segment","Time"],["1. Welcome & Opening","15 min"],["2. Activity","8 min"],["3. Bible Lesson","10 min"],["4. Worship & Gospel","5 min"],["5. Small Group / Learner Guide","20 min"],["6. Give + Gym + Checkout","10 min"]]},{type:"section",text:"1. WELCOME & OPENING  (15 min)"},{type:"dir",text:"[Music playing on TV. Students can play games and hang out. Greet them as they come in.]"},{type:"say",text:"Welcome! Before we jump in, let's do some introductions and get warmed up."},{type:"bold",text:"Opening questions:"},...parseScript(d.opening_questions),...(d.opening_questions?[]:[PH("3-4 opening questions")]),{type:"section",text:"2. ACTIVITY  (8 min)"},d.themed_activity_name?{type:"bold",text:d.themed_activity_name}:PH("Activity name"),...parseScript(d.themed_activity_script),...(d.themed_activity_script?[]:[PH("Activity script with bridge to lesson")]),{type:"section",text:"3. BIBLE LESSON  (10 min)"},{type:"subsection",text:"A. ANCHOR"},kingdomSay,...parseScript(d.anchor),...(d.anchor?[]:[PH("Anchor teaching")]),{type:"subsection",text:"B. ENCOUNTER"},{type:"say",text:"Let's open our Bibles and walk through this together."},...parseScript(d.encounter),...(d.encounter?[]:[PH("Encounter — READ/SAY/ASK with multiple passages")]),{type:"subsection",text:"C. CONNECT"},...parseScript(d.connect),...(d.connect?[]:[PH("Connect teaching")]),...ftBlock(s),{type:"section",text:"4. WORSHIP & GOSPEL  (5 min)"},...gospelK3,{type:"section",text:"5. SMALL GROUP / LEARNER GUIDE  (20 min)"},{type:"say",text:"Form groups of two or three. Open your Learner Guides. Work through the questions together. We'll be walking around if you need help."},{type:"dir",text:'[Circulate. Push kids past surface-level answers. If a group finishes early, ask: "What\'s one question you still have?"]'},{type:"bold",text:"PRAYER"},d.prayer?{type:"p",text:d.prayer}:PH("Prayer"),{type:"section",text:"6. GIVE + GYM + CHECKOUT  (10 min)"},{type:"say",text:"At Storyline, we believe the church is a family, and we love one another by using our gifts as we gather, give, and serve. You will have a chance each week to give to your church family on your way out the door by dropping your money in the giving box."},{type:"dir",text:"[Invite students to talk with you during gym time if they have further questions.]"}].filter(Boolean); }
+
+function render_45_learner(s, d) { return [...sharedHeader(s,"4th-5th Learner Guide","4th5th_learner"),{type:"section",text:"STORY RECAP"},d.story_recap?{type:"p",text:d.story_recap}:PH("4-6 paragraph retelling"),...memoryVerse(s),{type:"section",text:"QUESTIONS"},{type:"p",text:"The Bible tells us what is true about God and about ourselves. All of the stories in the Bible fit together to tell us the big story of how God rescues sinners through His Son, Jesus."},...[["question_1","1"],["question_2","2"],["question_3","3"],["question_4","4"],["question_5","5"],["question_6","6"]].flatMap(([k,n])=>[{type:"bold",text:`${n}. ${d[k]||"___"}`},{type:"spacer",lines:6}]),d.bible_lookup?{type:"bold",text:`Find ${d.bible_lookup} in your Bible and write the words below:`}:null,d.bible_lookup?{type:"spacer",lines:6}:null].filter(Boolean); }
+
+const RENDERERS = { nursery_prayer:render_nursery, "12_24_months":render_1224, toddlers:render_toddlers, preschool_lg:render_preschool_lg, preschool_sg:render_preschool_sg, k3_sg:render_k3_sg, k3_lg:render_k3_lg, "4th5th_leader":render_45_leader, "4th5th_learner":render_45_learner };
+const TEMPLATE_ORDER = ["nursery_prayer","12_24_months","toddlers","preschool_lg","preschool_sg","k3_sg","k3_lg","4th5th_leader","4th5th_learner"];
+const SHORT_NAMES = { nursery_prayer:"0-12mo", "12_24_months":"12-24mo", toddlers:"Toddlers", preschool_lg:"Pre LG", preschool_sg:"Pre SG", k3_sg:"K-3 SG", k3_lg:"K-3 LG", "4th5th_leader":"4-5 Leader", "4th5th_learner":"4-5 Learner" };
+
+const ROOM_FULL_NAMES = { "12_24_months":"12-24 Months", toddlers:"Toddlers & 2s", preschool_lg:"Preschool Large Group", preschool_sg:"Preschool Small Group", k3_sg:"K-3rd Small Group", k3_lg:"K-3rd Large Group" };
+
+const SUPPLY_SPEC = {
+  "12_24_months": [{label:"Sensory Story", supplies:"sensory_supplies"}],
+  toddlers: [
+    {label:"Story Activity", supplies:"activity_supplies", name:"activity_name"},
+    {label:"Optional Activity", supplies:"optional_activity_supplies", name:"optional_activity_name"},
+  ],
+  preschool_lg: [{label:"Mailbox Prop", supplies:"mailbox_prop"}],
+  preschool_sg: [
+    {label:"Welcome Activity", supplies:"welcome_activity_supplies", name:"welcome_activity_name"},
+    {label:"Craft", supplies:"craft_supplies", name:"craft_name"},
+  ],
+  k3_sg: [{label:"Verse Activity", supplies:"verse_activity_supplies", name:"verse_activity_name"}],
+  k3_lg: [
+    {label:"Mailbox Prop", supplies:"mailbox_prop"},
+    {label:"Game", supplies:"game_supplies", name:"game_name"},
+  ],
+};
+
+function getSupplyRows(roomId, c) {
+  const spec = SUPPLY_SPEC[roomId];
+  if (!spec) return [];
+  return spec.map(item => {
+    const supplies = c[item.supplies];
+    if (!supplies || !supplies.trim() || supplies.trim().toLowerCase() === "none") return null;
+    const name = item.name ? c[item.name] : null;
+    return { label: item.label, name: name && name.trim() ? name : null, supplies };
+  }).filter(Boolean);
+}
+
+// Warns if an imported JSON blob contains room keys the renderers don't know about.
+// The original app imported unknown keys silently and the room just rendered empty.
+function unknownRooms(contentObj) {
+  return Object.keys(contentObj || {}).filter(k => !TEMPLATE_ORDER.includes(k));
+}
+
+function BlockRenderer({ blocks }) {
+  return blocks.map((b, i) => {
+    if (!b) return null;
+    switch (b.type) {
+      case "banner": return <div key={i} className="print-banner" style={{background:C.deep,color:"white",padding:"14px 20px",borderRadius:8,marginBottom:16}}><div style={{display:"flex",alignItems:"center",gap:12,marginBottom:8}}><div dangerouslySetInnerHTML={{__html:LOGO_SVG}} className="logo-container" style={{height:48}}/></div><div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline"}}><div style={{fontSize:20,fontWeight:700}}>{b.text}</div>{b.scripture && <div style={{fontSize:14,fontWeight:600,opacity:0.8}}>{b.scripture}</div>}</div></div>;
+      case "field": return <div key={i} className="print-field" style={{padding:"2px 0",fontSize:13}}><strong style={{color:C.deep}}>{b.label}:</strong> {b.value || <span style={{color:"#ccc"}}>—</span>}</div>;
+      case "section": return <div key={i} className="print-section" style={{background:C.deep,color:"white",padding:"8px 14px",borderRadius:4,marginTop:20,marginBottom:8,fontSize:13,fontWeight:700,letterSpacing:0.5}}>{b.text}</div>;
+      case "sectionLabel": return <div key={i} className="print-sectionLabel" style={{background:C.sky,color:"white",padding:"6px 14px",borderRadius:4,marginTop:20,marginBottom:8,fontSize:12,fontWeight:700,letterSpacing:1}}>{b.text}</div>;
+      case "subsection": return <div key={i} className="print-subsection" style={{fontWeight:700,color:C.sky,fontSize:14,marginTop:16,marginBottom:6,borderBottom:`1px solid ${C.foam}`,paddingBottom:4}}>{b.text}</div>;
+      case "say": return <div key={i} style={{marginBottom:6,paddingLeft:4}}><strong style={{color:C.deep}}>SAY:</strong> {b.text}</div>;
+      case "ask": return <div key={i} style={{marginBottom:6,paddingLeft:4}}><strong style={{color:C.sky}}>ASK:</strong> {b.text}</div>;
+      case "engage": return <div key={i} style={{marginBottom:6,background:C.foam,padding:"5px 10px",borderRadius:4}}><strong style={{color:C.deep}}>ENGAGE:</strong> {b.text}</div>;
+      case "read": return <div key={i} style={{marginBottom:6,fontWeight:600,color:C.sage}}>{b.text}</div>;
+      case "dir": return <div key={i} style={{marginBottom:6,fontStyle:"italic",color:"#777",fontSize:13}}>{b.text}</div>;
+      case "p": return <div key={i} style={{marginBottom:6}}>{b.text}</div>;
+      case "devotional": return <div key={i} style={{marginBottom:6}}>{b.text.split("\n\n").map((para,pi)=><p key={pi} style={{margin:"0 0 10px 0"}}>{para}</p>)}</div>;
+      case "bold": return <div key={i} className="print-bold-label" style={{marginBottom:6,fontWeight:700}}>{b.text}</div>;
+      case "verse": return <div key={i} style={{marginBottom:6,fontStyle:"italic",color:C.deep,background:C.light,padding:"6px 10px",borderRadius:4,borderLeft:`3px solid ${C.sky}`}}>{b.text}</div>;
+      case "placeholder": return <div key={i} style={{marginBottom:6,color:"#bbb",fontStyle:"italic",padding:"8px 12px",border:"1px dashed #ddd",borderRadius:4}}>⬜ {b.text}</div>;
+      case "table": return <table key={i} style={{width:"100%",borderCollapse:"collapse",marginBottom:12,fontSize:12}}><thead><tr>{b.rows[0].map((h,j)=><th key={j} style={{background:C.deep,color:"white",padding:"6px 10px",textAlign:"left",fontWeight:600}}>{h}</th>)}</tr></thead><tbody>{b.rows.slice(1).map((row,ri)=><tr key={ri}>{row.map((cell,ci)=><td key={ci} style={{padding:"5px 10px",borderBottom:"1px solid #eee",background:ri%2===0?"#fff":C.light}}>{cell}</td>)}</tr>)}</tbody></table>;
+      case "spacer": return <div key={i}>{Array.from({length:b.lines||6},(_,j)=><br key={j}/>)}</div>;
+      default: return <div key={i}>{b.text}</div>;
+    }
+  });
+}
+
+const EMPTY_SHARED = {big_idea:"",event_name:"",scripture_ref:"",foundational_truth:"",memory_verse:"",memory_verse_ref:"",catechism_q:"",catechism_a:"",leader_devotional:""};
+
+function App() {
+  const [shared, setShared] = useState(() => storage.get(K_SHARED) || {...EMPTY_SHARED});
+  const [content, setContent] = useState(() => storage.get(K_CONTENT) || {});
+  const [tab, setTab] = useState("import");
+  const [activeDoc, setActiveDoc] = useState("nursery_prayer");
+  const [json, setJson] = useState("");
+  const [status, setStatus] = useState("");
+  const [warning, setWarning] = useState("");
+
+  useEffect(() => { const t=setTimeout(()=>{storage.set(K_SHARED,shared);storage.set(K_CONTENT,content);},800); return()=>clearTimeout(t); }, [shared,content]);
+
+  const doImport = useCallback(() => {
+    try {
+      const d = JSON.parse(json);
+      if (d.shared) setShared(p=>({...p,...d.shared}));
+      if (d.content) setContent(p=>({...p,...d.content}));
+      const bad = unknownRooms(d.content);
+      setWarning(bad.length ? `Unrecognized room key(s) ignored: ${bad.join(", ")}` : "");
+      setStatus(`✓ Imported — ${Object.keys(d.content||{}).length} document(s) populated`);
+      setTab("documents");
+    } catch(e) { setWarning(""); setStatus(`✗ Error: ${e.message}`); }
+  }, [json]);
+
+  const docBlocks = RENDERERS[activeDoc]?.(shared, content[activeDoc]||{}) || [];
+  const filledDocs = TEMPLATE_ORDER.filter(id => content[id] && Object.values(content[id]).some(v=>v&&String(v).trim()));
+
+  return (
+    <div style={{maxWidth:860,margin:"0 auto",fontFamily:"Arial, sans-serif",fontSize:14,color:"#1a1a1a"}}>
+      <div className="no-print" style={{background:C.deep,color:"white",padding:"16px 24px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <div style={{display:"flex",alignItems:"center",gap:16}}><div dangerouslySetInnerHTML={{__html:LOGO_SVG}} className="logo-container" style={{height:36}}/><div style={{fontSize:16,fontWeight:600,opacity:0.6,borderLeft:"1px solid rgba(255,255,255,0.3)",paddingLeft:16}}>{SERIES.title}</div></div>
+        <div style={{fontSize:11,opacity:0.6}}>{filledDocs.length}/9 docs filled</div>
+      </div>
+
+      <div className="no-print" style={{display:"flex",background:"#f5f5f5",borderBottom:`2px solid ${C.deep}`}}>
+        {[["import","Import JSON"],["shared","Shared Fields"],["documents","Documents"],["supplies","Supplies"]].map(([id,label])=>(
+          <button key={id} onClick={()=>setTab(id)} style={{padding:"10px 20px",border:"none",cursor:"pointer",fontSize:13,fontWeight:tab===id?700:400,background:tab===id?"white":"transparent",color:tab===id?C.deep:"#666",borderBottom:tab===id?`3px solid ${C.coral}`:"3px solid transparent"}}>{label}</button>
+        ))}
+      </div>
+
+      <div style={{background:"white",padding:20,border:"1px solid #e0e0e0",borderTop:"none",minHeight:500}}>
+        {tab === "import" && (
+          <div className="no-print">
+            <p style={{color:"#666",fontSize:13,margin:"0 0 12px"}}>Paste the JSON from Claude. One click populates all 9 documents.</p>
+            <textarea value={json} onChange={e=>setJson(e.target.value)} placeholder="Paste JSON here..." style={{width:"100%",height:280,fontFamily:"monospace",fontSize:11,padding:10,border:"1px solid #ddd",borderRadius:6,resize:"vertical",boxSizing:"border-box"}} />
+            <div style={{display:"flex",gap:12,marginTop:10,alignItems:"center"}}>
+              <button onClick={doImport} style={{background:C.coral,color:"white",border:"none",padding:"10px 28px",borderRadius:6,fontSize:14,fontWeight:700,cursor:"pointer"}}>Import &amp; Populate</button>
+              {status && <span style={{fontSize:12,color:status.startsWith("✗")?"#c00":C.sage,fontWeight:600}}>{status}</span>}
+              <button onClick={()=>{if(confirm("Clear all content?")){setShared({...EMPTY_SHARED});setContent({});setWarning("");storage.del(K_SHARED);storage.del(K_CONTENT);}}} style={{marginLeft:"auto",background:"#eee",border:"none",padding:"8px 16px",borderRadius:6,cursor:"pointer",fontSize:12,color:"#666"}}>Reset All</button>
+            </div>
+            {warning && <div style={{marginTop:10,fontSize:12,color:"#8a6d00",background:"#FFF8E1",border:"1px solid #F2C75C",padding:"8px 12px",borderRadius:4}}>⚠ {warning}</div>}
+          </div>
+        )}
+
+        {tab === "shared" && (
+          <div className="no-print">
+            {Object.entries({big_idea:"Big Idea Today",event_name:SERIES.fieldLabel,scripture_ref:"Lesson Scripture (shows in header)",foundational_truth:"Foundational Truth",memory_verse:"Memory Verse Full Text (CSB)",memory_verse_ref:"Memory Verse Reference (e.g. John 14:26)",catechism_q:"Catechism Q",catechism_a:"Catechism A"}).map(([k,label])=>(
+              <div key={k} style={{marginBottom:10}}>
+                <label style={{display:"block",fontSize:11,fontWeight:700,color:C.deep,marginBottom:3,textTransform:"uppercase",letterSpacing:0.5}}>{label}</label>
+                <input value={shared[k]} onChange={e=>setShared(p=>({...p,[k]:e.target.value}))} style={{width:"100%",padding:"7px 10px",border:"1px solid #ddd",borderRadius:4,fontSize:13,boxSizing:"border-box"}} />
+              </div>
+            ))}
+            <div style={{marginBottom:10}}>
+              <label style={{display:"block",fontSize:11,fontWeight:700,color:C.deep,marginBottom:3,textTransform:"uppercase",letterSpacing:0.5}}>Leader Devotional</label>
+              <textarea value={shared.leader_devotional} onChange={e=>setShared(p=>({...p,leader_devotional:e.target.value}))} style={{width:"100%",height:120,padding:"7px 10px",border:"1px solid #ddd",borderRadius:4,fontSize:13,resize:"vertical",boxSizing:"border-box"}} />
+            </div>
+          </div>
+        )}
+
+        {tab === "documents" && (
+          <div>
+            <div className="no-print" style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:16}}>
+              {TEMPLATE_ORDER.map(id => {
+                const filled = filledDocs.includes(id);
+                return <button key={id} onClick={()=>setActiveDoc(id)} style={{padding:"6px 12px",border:`2px solid ${activeDoc===id?C.coral:filled?C.sage:"#ddd"}`,borderRadius:16,cursor:"pointer",fontSize:11,fontWeight:activeDoc===id?700:500,background:activeDoc===id?C.coral:filled?"#f0f8f0":"white",color:activeDoc===id?"white":filled?C.deep:"#999"}}>{SHORT_NAMES[id]}{filled?" ✓":""}</button>;
+              })}
+              <button onClick={()=>{window.print()}} id="dl-btn" style={{marginLeft:"auto",padding:"6px 14px",border:`2px solid ${C.deep}`,borderRadius:16,cursor:"pointer",fontSize:11,fontWeight:600,background:"white",color:C.deep}}>📥 Save as PDF</button>
+            </div>
+            <div id="doc-content" style={{lineHeight:1.6}}>
+              <BlockRenderer blocks={docBlocks} />
+            </div>
+          </div>
+        )}
+
+        {tab === "supplies" && (
+          <div>
+            <div className="no-print" style={{display:"flex",alignItems:"center",marginBottom:16}}>
+              <div style={{fontSize:11,color:"#666"}}>One-page supply summary across all rooms</div>
+              <button onClick={()=>{window.print()}} style={{marginLeft:"auto",padding:"6px 14px",border:`2px solid ${C.deep}`,borderRadius:16,cursor:"pointer",fontSize:11,fontWeight:600,background:"white",color:C.deep}}>📥 Save as PDF</button>
+            </div>
+            <div style={{lineHeight:1.5}}>
+              <div style={{background:C.deep,color:"white",padding:"12px 16px",marginBottom:16}}>
+                <div style={{fontSize:11,opacity:0.7,textTransform:"uppercase",letterSpacing:1,marginBottom:2}}>Supply Summary</div>
+                <div style={{fontSize:18,fontWeight:700}}>{shared.event_name || "(Untitled Lesson)"}</div>
+                {shared.scripture_ref && <div style={{fontSize:12,opacity:0.85,marginTop:2}}>{shared.scripture_ref}</div>}
+              </div>
+              {Object.keys(SUPPLY_SPEC).map(roomId => {
+                const rows = getSupplyRows(roomId, content[roomId]||{});
+                if (rows.length === 0) return (
+                  <div key={roomId} style={{marginBottom:16,opacity:0.45}}>
+                    <div style={{fontWeight:700,color:C.deep,fontSize:13,borderBottom:`1px solid #ddd`,paddingBottom:4,marginBottom:6}}>{ROOM_FULL_NAMES[roomId]}</div>
+                    <div style={{fontSize:12,fontStyle:"italic",color:"#888",paddingLeft:8}}>No supplies listed</div>
+                  </div>
+                );
+                return (
+                  <div key={roomId} style={{marginBottom:16}}>
+                    <div style={{fontWeight:700,color:C.deep,fontSize:13,borderBottom:`1px solid #ddd`,paddingBottom:4,marginBottom:6}}>{ROOM_FULL_NAMES[roomId]}</div>
+                    {rows.map((r,i) => (
+                      <div key={i} style={{marginBottom:8,paddingLeft:8}}>
+                        <div style={{fontSize:12,fontWeight:600,color:C.deep}}>
+                          {r.label}{r.name ? <span style={{color:"#666",fontWeight:500}}>: "{r.name}"</span> : null}
+                        </div>
+                        <div style={{fontSize:13,color:"#333",marginTop:2}}>{r.supplies}</div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+      <div className="no-print" style={{textAlign:"center",padding:12,fontSize:10,color:"#bbb"}}>{SERIES.title} Formatter • Data persists in browser (key: {SERIES.storageKey})</div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
